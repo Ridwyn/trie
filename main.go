@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -83,7 +84,7 @@ func (t *Trie) Autocomplete(word string) string {
 		if index >= 256 {
 			fmt.Printf("Error: Non Ascii characters not supported %v", string(strippedWord[i]))
 		}
-		
+
 		if current.Children[index] == nil {
 			fmt.Printf("No word for Prefix  %v", string(strippedWord[i]))
 			return str
@@ -97,6 +98,7 @@ func (t *Trie) Autocomplete(word string) string {
 		return str
 	}
 
+	//TODO: implement returning all possible words from prefix
 	//Traverse through all node to find a word
 	stack := make([]*Node, 0)
 	stack = append(stack, current)
@@ -139,7 +141,6 @@ func (t *Trie) Print() string {
 	stack := make([]*Node, 0)
 	stack = append(stack, current)
 
-	
 	count := 0
 	//create graphiz node for Root
 	node := fmt.Sprintf("%s%d", "node_", count)
@@ -204,5 +205,48 @@ func main() {
 	fmt.Printf("%#v\n", t)
 	fmt.Printf("%#v\n", t.ContainsWord("bag"))
 	fmt.Printf("%#v\n", t.Autocomplete("hello"))
+
+	//TODO: implement frontend to consume file for to generate trie
+	prefixFromFileAndPrint()
+}
+
+func prefixFromFileAndPrint() {
+
+	filename := "./countries"
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		fmt.Printf("Error cannot read file %v", err)
+	}
+
+	//use Tokenizer to parse each word in file
+	// t := NewTokenizer(string(b), filename).TokeniseContent()
+	// for word, _ := range t.TermCountMap {
+	// 	trie.insert(string(word))
+
+	// }
+
+	trie := NewTrie()
+	//use new line to parse list
+	word := ""
+	for _, runevl := range string(b) {
+		if runevl == 10 {
+			trie.insert(word)
+			word = ""
+		} else {
+			word += string(runevl)
+		}
+
+	}
+
+	//write trie to dot file
+	os.WriteFile(filename+".dot", []byte(trie.Print()), os.ModePerm)
+
+	//execute dot Tpng to generate png of trie
+	cmd := exec.Command("bash", "-c", "dot -Tpng "+filename+".dot > "+filename+".png")
+	err = cmd.Run()
+	if err != nil {
+		fmt.Printf("Error could not execute command %v", err)
+
+	}
 
 }
