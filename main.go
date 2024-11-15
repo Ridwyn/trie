@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	_"os"
+	"os"
 	"strings"
 )
 
@@ -10,6 +10,7 @@ type Node struct {
 	Children [256]*Node
 	Char     string
 	word     string
+	graphviz string
 }
 
 type Trie struct {
@@ -18,10 +19,9 @@ type Trie struct {
 
 // Trie constructor
 func NewTrie() *Trie {
-	root := &Node{Char: "\000"}
+	root := &Node{Char: ""}
 	return &Trie{RootNode: root}
 }
-
 
 func (t *Trie) insert(word string) {
 
@@ -71,7 +71,7 @@ func (t *Trie) ContainsWord(word string) bool {
 	return true
 }
 
-func (t *Trie) autocomplete(word string) string {
+func (t *Trie) Autocomplete(word string) string {
 
 	current := t.RootNode
 	strippedWord := strings.ToLower(strings.ReplaceAll(word, " ", ""))
@@ -82,6 +82,11 @@ func (t *Trie) autocomplete(word string) string {
 		index := int(strippedWord[i])
 		if index >= 256 {
 			fmt.Printf("Error: Non Ascii characters not supported %v", string(strippedWord[i]))
+		}
+		
+		if current.Children[index] == nil {
+			fmt.Printf("No word for Prefix  %v", string(strippedWord[i]))
+			return str
 		}
 		current = current.Children[index]
 
@@ -101,10 +106,10 @@ out:
 			fmt.Printf("No words for Prefix")
 			break out
 		}
-		//pop off first element off stack
+		//get first element of stack
 		current = stack[0]
-		//use copy to reuse space of initial stack insteaf of = which may reassign
-		copy(stack, stack[1:])
+		//pop off first element off stack
+		stack = stack[1:]
 
 		for i := 0; i < 256; i++ {
 			if current.Children[i] != nil {
@@ -124,23 +129,80 @@ out:
 
 }
 
-func main() {
+func (t *Trie) Print() string {
+	graph := "digraph{"
+	str := ""
+	nodes := ""
 
+	current := t.RootNode
+	//Traverse through all nodes and children
+	stack := make([]*Node, 0)
+	stack = append(stack, current)
+
+	
+	count := 0
+	//create graphiz node for Root
+	node := fmt.Sprintf("%s%d", "node_", count)
+	label := " [label=\"" + current.Char + "\"]"
+	current.graphviz = node
+	nodes += node + label + ";\n"
+
+out:
+	for {
+		if len(stack) == 0 {
+			fmt.Printf("End of Trie")
+			break out
+		}
+		//get and pop off first element off stack
+		current = stack[0]
+		stack = stack[1:]
+
+		//get graphiz node of parent and append children
+		str += current.graphviz + "-> {"
+
+		for i := 0; i < 256; i++ {
+			if current.Children[i] != nil {
+				//add children to stack
+				stack = append(stack, current.Children[i])
+				//create graphiz node od children
+				cnode := fmt.Sprintf("%s%s%d", "node_", current.graphviz, i)
+				clabel := " [label=\"" + current.Children[i].Char + "\"]"
+				current.Children[i].graphviz = cnode
+				nodes += cnode + clabel + ";\n"
+				str += cnode
+				if string(str[len(str)-1]) != "{" {
+					str += " "
+				}
+
+			}
+			if i == 255 {
+				str += "}; \n"
+			}
+		}
+
+		count++
+	}
+
+	graph += nodes + "\n" + str + "}"
+	return graph
+}
+
+func main() {
 
 	t := NewTrie()
 	t.insert("hello")
 	t.insert("hell")
 	t.insert("helli")
 	t.insert("bag")
+	t.insert("baggage")
+	t.insert("dorm")
 	t.insert("doe")
 
-
-
 	//TODO print trie using graphiz svg and png
-	// os.WriteFile("out.dot", []byte(trie), os.ModePerm)
+	os.WriteFile("out.dot", []byte(t.Print()), os.ModePerm)
 
 	fmt.Printf("%#v\n", t)
 	fmt.Printf("%#v\n", t.ContainsWord("bag"))
-	fmt.Printf("%#v\n", t.autocomplete("hello"))
+	fmt.Printf("%#v\n", t.Autocomplete("hello"))
 
 }
