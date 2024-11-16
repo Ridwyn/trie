@@ -207,7 +207,7 @@ func main() {
 	fmt.Printf("%#v\n", t.Autocomplete("hello"))
 
 	//TODO: implement frontend to consume file for to generate trie
-	prefixFromFileAndPrint()
+	// prefixFromFileAndPrint()
 }
 
 func prefixFromFileAndPrint() {
